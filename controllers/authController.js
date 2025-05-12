@@ -3,6 +3,8 @@ const { catchAsync } = require("../utils/catchAsync");
 // -> npm i jsonwebtoken
 const jwt = require("jsonwebtoken");
 const ErrorResponse = require("../utils/errorResponse");
+const { createEmail, sendEmail } = require("../utils/email");
+const crypto = require("crypto");
 
 exports.register = catchAsync(async (req, res, next) => {
     const newUser = await User.create({
@@ -72,9 +74,59 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     }
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false })
+    const email = createEmail(user.email, "Password Reset Token", `Your password reset token is: ${resetToken}\nIt is valid for 10 minutes.`);
+    await sendEmail(email);
+    return res.status(200).json({ status: "Success", message: "Token sent to email" });
 });
 
 exports.resetPassword = catchAsync(async (req, res, next) => {
-
+    const hashedToken = crypto.createHash("sha256")
+            .update(req.body.token)
+            .digest("hex");
+    const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExpires: { $gt: Date.now() } });
+    if (!user) {
+        return next(new ErrorResponse(404, "Not Found", "Invalid or expired token"));
+    }
+    user.password = req.body.password;
+    user.passwordConfirmation = req.body.passwordConfirmation;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    // user.passwordLastChangedAt = Date.now(); -> há um middleware no model que faz isso para nós
+    await user.save();
+    return res.status(200).json({ status: "Success", message: "Password reset successfully" });
 });
 
+exports.updatePassword = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) {
+        return next(new ErrorResponse(404, "Not Found", "User not found"));
+    }
+    const isCurrentPasswordValid = await user.validatePasswords(req.body.currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+        return next(new ErrorResponse(409, "Conflict", "Invalid current password"));
+    }
+    user.password = req.body.newPassword;
+    user.passwordConfirmation = req.body.passwordConfirmation;
+    await user.save();
+    const token = signToken(user);
+    return res.status(200).json({ status: "Success", message: "Password updated successfully", token });
+});
+
+exports.updateSelfInfos = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new ErrorResponse(404, "Not Found", "User not found"));
+    }
+    const data = { name: req.body.name, email: req.body.email };
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, data, { new: true, runValidators: true });
+    return res.status(200).json({ status: "Success", data: updatedUser });
+});
+
+exports.deleteSelf = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new ErrorResponse(404, "Not Found", "User not found"));
+    }
+    await User.findByIdAndUpdate(req.user._id, { active: false });
+    return res.status(200).json({ status: "Success", message: "Account deleted successfully" });
+})

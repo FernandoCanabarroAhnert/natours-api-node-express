@@ -7,6 +7,9 @@ authRouter
     .post("/register", authController.register)
     .post("/login", authController.login)
     .post("/forgot-password", authController.forgotPassword)
-    .post("/reset-password", authController.resetPassword);
+    .post("/reset-password", authController.resetPassword)
+    .put("/update-password", authController.authGuard, authController.updatePassword)
+    .put("/update-infos", authController.authGuard, authController.updateSelfInfos)
+    .delete("/delete-me", authController.authGuard, authController.deleteSelf)
 
 module.exports = authRouter;
