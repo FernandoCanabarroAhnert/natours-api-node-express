@@ -27,6 +27,11 @@ exports.login = catchAsync(async (req, res, next) => {
         return next(new ErrorResponse(401, "Unauthorized", "Invalid credentials"));
     }
     const token = signToken(user);
+    // res.cookie("jwt", token, {
+    //     expires: new Date(Date.now() + process.env.JWT_EXPIRES_IN * 1000),
+    //     httpOnly: true,
+    //     secure: true
+    // });
     return res.status(200).json({ token });
 });
 
