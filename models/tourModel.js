@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
+// const User = require('./userModel');
 
 const tourSchema = new mongoose.Schema({
     name: {
@@ -73,7 +74,37 @@ const tourSchema = new mongoose.Schema({
     secretTour: {
         type: Boolean,
         default: false
-    }
+    },
+    startLocation: {
+        // GeoJSON
+        type: {
+            type: String,
+            default: 'Point',
+            enum: ['Point']
+        },
+        coordinates: [Number],
+        address: String,
+        description: String
+    },
+    locations: [{
+        // GeoJSON
+        type: {
+            type: String,
+            default: 'Point',
+            enum: ['Point']
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number
+    }],
+    //guides: Array
+    guides: [
+        { 
+            type: mongoose.Schema.ObjectId,
+            ref: 'User'
+        }
+    ]
 }, {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
@@ -83,6 +114,11 @@ const tourSchema = new mongoose.Schema({
 tourSchema.virtual('durationWeeks').get(function() { // -> virtuals não são salvos no banco de dados, eles são apenas uma representação do dado, como um DTO
     return this.duration / 7
 });
+tourSchema.virtual('reviews', {
+    ref: 'Review',
+    foreignField: 'tour',
+    localField: '_id' // -> o _id é o id do tour
+})
 
 // Document Middleware -> executado somente com o .save() ou .create()
 tourSchema.pre('save', function(next) { // -> é similar a uma trigger do SQL. O 'pre' é executado antes
@@ -90,23 +126,22 @@ tourSchema.pre('save', function(next) { // -> é similar a uma trigger do SQL. O
     next();
 });
 
-tourSchema.post('save', function(doc, next) { // O 'post' é executado depois
-    console.log(doc);
-    next();
-});
-
-tourSchema.pre('find', function(next) {
-    this.find({ secretTour: { $ne: true } })
-    next();
-});
-
-tourSchema.post('find', function(docs, next) {
-    console.log(docs);
-    next();
-});
+// tourSchema.pre('save', async function(next) {
+//     const guidesPromises = this.guides.map(async id => await User.findById(id)); // -> a iteração do map vai retornar um array de promises
+//     this.guides = await Promise.all(guidesPromises);
+//     next();
+// })
 
 tourSchema.pre('aggregate', function(next) {
     this.pipeline().unshift({ $match: { secretTour: { $ne: true } } })
+    next();
+});
+
+tourSchema.pre(/^find/, function(next) {
+    this.populate({
+        path: 'guides',
+        select: '-__v -passwordLastChangedAt'
+    })
     next();
 });
 

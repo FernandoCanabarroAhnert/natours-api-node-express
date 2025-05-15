@@ -17,10 +17,5 @@ exports.createEmail = (emailTo, subject, text) => {
 };
 
 exports.sendEmail = catchAsync(async (email) => {
-    try {
-        await sgMail.send(email);
-    }
-    catch (error) {
-        return next(new ErrorResponse(400, 'Bad Request', 'Error sending email'));
-    }
+    await sgMail.send(email);
 });

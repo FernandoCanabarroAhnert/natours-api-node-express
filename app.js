@@ -15,6 +15,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 // npm i hpp
 const hpp = require('hpp');
+const reviewRouter = require('./routes/reviewRoutes');
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use(hpp({
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/reviews', reviewRouter);
 
 app.all('*', (req, res, next) => { // -> semelhante ao operador coringa do Angular, ou seja, ele vai pegar todas as rotas que não foram definidas
     // -> o método all é usado para pegar todas as requisições, independente do método (GET, POST, PUT, DELETE)
