@@ -134,4 +134,12 @@ exports.deleteSelf = catchAsync(async (req, res, next) => {
     }
     await User.findByIdAndUpdate(req.user._id, { active: false });
     return res.status(200).json({ status: "Success", message: "Account deleted successfully" });
-})
+});
+
+exports.getMe = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new ErrorResponse(404, "Not Found", "User not found"));
+    }
+    return res.status(200).json(user);
+});

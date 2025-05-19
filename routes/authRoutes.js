@@ -11,5 +11,6 @@ authRouter
     .put("/update-password", authController.authGuard, authController.updatePassword)
     .put("/update-infos", authController.authGuard, authController.updateSelfInfos)
     .delete("/delete-me", authController.authGuard, authController.deleteSelf)
+    .get("/me", authController.authGuard, authController.getMe)
 
 module.exports = authRouter;

@@ -2,6 +2,7 @@ const Tour = require('../models/tourModel');
 const { catchAsync } = require('../utils/catchAsync');
 const ErrorResponse = require('../utils/errorResponse');
 const QueryUtils = require('../utils/queryUtils');
+const handlerFactory = require("./handlerFactory");
 
 exports.aliasTopTours = (req, res, next) => {
     req.query.limit = '5';
@@ -10,51 +11,11 @@ exports.aliasTopTours = (req, res, next) => {
     next();
 }
 
-exports.findAllTours = catchAsync(async (req, res, next) => {
-    const queryUtils = new QueryUtils(Tour.find(), req.query)
-        .filter()
-        .sort()
-        .project()
-        .paginate();
-
-    const tours = await queryUtils.query;
-    return res.status(200).json(tours);
-});
-
-exports.findTourById = catchAsync(async (req, res, next) => {
-    const id = req.params.id;
-    const tour = await Tour.findById(id).populate('reviews');
-    if (!tour) {
-        return next(new ErrorResponse(404, 'Not Found', `Tour with id ${id} not found`));
-    }
-    return res.status(200).json(tour);
-});
-
-exports.createTour = catchAsync(async (req, res, next) => {
-    const response = await Tour.create(req.body);
-    return res.status(201).json(response);
-});
-
-exports.updateTour = catchAsync(async (req, res, next) => {
-    const id = req.params.id
-    const tour = await Tour.findById(id);
-    if (!tour) {
-        return next(new ErrorResponse(404, 'Not Found', `Tour with id ${id} not found`));
-    }
-    // const updatedTour = await Tour.updateOne({ _id: id}, req.body); -> esse aqui retorna o status da atualização, mas não retorna o objeto atualizado
-    const updatedTour = await Tour.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
-    return res.status(200).json(updatedTour);
-})
-
-exports.deleteTour = catchAsync(async (req, res, next) => {
-    const id = req.params.id
-    const tour = await Tour.findByIdAndDelete(id);
-    if (!tour) {
-        return next(new ErrorResponse(404, 'Not Found', `Tour with id ${id} not found`));
-    }
-    res.status(204);
-    res.send();
-});
+exports.findAllTours = handlerFactory.findAll(Tour);
+exports.findTourById = handlerFactory.findById(Tour, { path: 'reviews' });
+exports.createTour = handlerFactory.createOne(Tour);
+exports.updateTour = handlerFactory.updateOne(Tour);
+exports.deleteTour = handlerFactory.deleteOne(Tour);
 
 exports.getTourStats = catchAsync(async (req, res, next) => {
     const stats = await Tour.aggregate([
@@ -75,6 +36,48 @@ exports.getTourStats = catchAsync(async (req, res, next) => {
         }
     ]);
     return res.status(200).json(stats);
+});
+
+exports.getToursWithin = catchAsync(async (req, res, next) => {
+    const { distance, latlong, unit } = req.params;
+    const [ lat, long ] = latlong.split(',');
+    if (!lat || !long) {
+        return next(new ErrorResponse(400, 'Bad Request', 'Please provide latitude and longitude in the format lat,long'));
+    }
+    const radius = unit === 'miles' ? distance / 3963.2 : distance / 6378.1;
+    const tours = await Tour.find({
+        startLocation: { $geoWithin: { $centerSphere: [[long, lat], radius] } }
+    });
+    return res.status(200).json(tours);
+});
+
+exports.getDistances = catchAsync(async (req, res, next) => {
+    const { latlong, unit } = req.params;
+    const [ lat, long ] = latlong.split(',');
+    if (!lat || !long) {
+        return next(new ErrorResponse(400, 'Bad Request', 'Please provide latitude and longitude in the format lat,long'));
+    }
+    const multiplier = unit === 'miles' ? 0.000621371 : 0.001; // -> o valor padrão é em metros, então precisamos converter para milhas ou quilômetros
+    const distances = await Tour.aggregate([
+        { 
+            $geoNear: {
+                near: {
+                    type: 'Point',
+                    coordinates: [long * 1, lat * 1]
+                },
+                distanceField: 'distance', // -> o nome do campo que vai receber a distância. 
+                // -> essas 2 configurações são sempre padrão
+                distanceMultiplier: multiplier
+            }
+        },
+        {
+            $project: {
+                distance: 1,
+                name: 1
+            }
+        }
+    ]);
+    return res.status(200).json(distances);
 })
 
 exports.getMonthlyPlan = async (req, res) => {

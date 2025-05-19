@@ -11,12 +11,14 @@ tourRouter
     .get('/', authController.authGuard, tourController.findAllTours)
     .post('/', authController.authGuard, authController.preAuthorize('admin'), tourController.createTour)
     .get('/:id', tourController.findTourById)
-    .put('/:id', tourController.updateTour)
-    .delete('/:id', tourController.deleteTour)
+    .put('/:id', authController.authGuard, authController.preAuthorize('admin'), tourController.updateTour)
+    .delete('/:id', authController.authGuard, authController.preAuthorize('admin'), tourController.deleteTour)
     .get('/top-5-cheap', tourController.aliasTopTours, tourController.findAllTours)
-    .get('/stats', tourController.getTourStats)
-    .get('/monthly-plan/:year', tourController.getMonthlyPlan)
-    .get('/price', tourController.priceAggregation);
+    .get('/stats', authController.authGuard, authController.preAuthorize('admin'), tourController.getTourStats)
+    // .get('/monthly-plan/:year', tourController.getMonthlyPlan)
+    // .get('/price', tourController.priceAggregation);
+    .get('/tours-within/:distance/center/:latlong/unit/:unit', tourController.getToursWithin)
+    .get('/distances/:latlong/unit/:unit', tourController.getDistances);
 
 tourRouter.use('/:tourId/reviews', reviewRouter);
 

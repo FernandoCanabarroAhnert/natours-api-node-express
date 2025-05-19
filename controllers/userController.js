@@ -1,46 +1,9 @@
 const User = require("../models/userModel")
 const { catchAsync } = require("../utils/catchAsync")
+const handlerFactory = require("./handlerFactory");
 
-exports.findAllUsers = catchAsync(async (req, res, next) => {
-    const users = await User.find();
-    return res.status(200).json(users);
-})
-
-exports.findUserById = (req, res) => {
-    const id = req.params.id
-    return res.status(200).json({
-        status: 'success',
-        data: {
-            users: id
-        },
-    })
-}
-
-exports.createUser = (req, res) => {
-    const body = req.body;
-    return res.status(201).json({
-        status: 'success',
-        data: {
-            users: body,
-        },
-    })
-}
-
-exports.updateUser = (req, res) => {
-    const id = req.params.id
-    const body = req.body;
-    return res.status(200).json({
-        status: 'success',
-        data: {
-            users: { id, ...body },
-        },
-    })
-}
-
-exports.deleteUser = (req, res) => {
-    const id = req.params.id
-    return res.status(204).json({
-        status: 'success',
-        data: null,
-    })
-}
+exports.findAllUsers = handlerFactory.findAll(User);
+exports.findUserById = handlerFactory.findById(User);
+exports.createUser = handlerFactory.createOne(User);
+exports.updateUser = handlerFactory.updateOne(User);
+exports.deleteUser = handlerFactory.deleteOne(User);

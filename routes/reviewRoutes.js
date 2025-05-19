@@ -6,6 +6,8 @@ const reviewRouter = express.Router({ mergeParams: true });
 
 reviewRouter
     .get('/', reviewController.findAllReviews)
-    .post('/', authController.authGuard, authController.preAuthorize('user'), reviewController.createReview)
+    .post('/', authController.authGuard, authController.preAuthorize('user'), reviewController.setReviewUserIdAndTourId, reviewController.createReview)
+    .put('/:id', authController.authGuard, authController.preAuthorize('user'), reviewController.updateReview)
+    .delete('/:id', authController.authGuard, authController.preAuthorize('user', 'admin'), reviewController.deleteReview);
 
 module.exports = reviewRouter;
