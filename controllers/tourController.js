@@ -1,8 +1,57 @@
 const Tour = require('../models/tourModel');
 const { catchAsync } = require('../utils/catchAsync');
 const ErrorResponse = require('../utils/errorResponse');
-const QueryUtils = require('../utils/queryUtils');
 const handlerFactory = require("./handlerFactory");
+//npm i multer
+const multer = require('multer');
+//npm i sharp
+const sharp = require('sharp');
+
+const storage = multer.memoryStorage(); // -> Armazena a imagem na memória
+
+const fileFilter = (req, file, callback) => {
+    if (!file.mimetype.startsWith('image')) {
+        callback(new ErrorResponse(400, "Bad Request", "Invalid file type"), false);
+    }
+    else {
+        callback(null, true);
+    }
+};
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter
+});
+
+exports.uploadTourImages = upload.fields([
+    { name: 'imageCover', maxCount: 1 },
+    { name: 'images', maxCount: 3 }
+]);
+
+// upload.array('images', 3); // -> para fazer o upload de várias imagens, mas não é o que estamos usando no momento,
+// pois há um a diferença entre as imagens (capa e imagens)
+
+exports.resizeTourImages = catchAsync(async (req, res, next) => {
+    if (!req.files.imageCover || !req.files.images) return next();
+
+    req.body.imageCover = `tour-${req.params.id}-${Date.now()}-cover.jpeg`
+    await sharp(req.files.imageCover[0].buffer)
+        .resize(2000, 1333)
+        .toFormat('jpeg')
+        .jpeg({ quality: 90 })
+        .toFile(`uploads/img/tours/${req.body.imageCover}`);
+
+    req.body.images = [];
+    await Promise.all(req.files.images.map(async (file, index) => {
+        const filename = `tour-${req.params.id}-${Date.now()}-${index + 1}.jpeg`;
+        await sharp(file.buffer)
+            .resize(2000, 1333)
+            .toFormat('jpeg')
+            .jpeg({ quality: 90 })
+            .toFile(`uploads/img/tours/${filename}`);
+        req.body.images.push(filename);
+    }));
+    next();
+});
 
 exports.aliasTopTours = (req, res, next) => {
     req.query.limit = '5';

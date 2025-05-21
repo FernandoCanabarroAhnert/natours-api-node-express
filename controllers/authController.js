@@ -5,6 +5,46 @@ const jwt = require("jsonwebtoken");
 const ErrorResponse = require("../utils/errorResponse");
 const { createEmail, sendEmail } = require("../utils/email");
 const crypto = require("crypto");
+//npm i multer
+const multer = require('multer');
+//npm i sharp
+const sharp = require('sharp');
+
+// const storage = multer.diskStorage({ 
+//     destination: (req, file, callback) => {
+//         callback(null, 'uploads/img/users');
+//     },
+//     filename: (req, file, callback) => {
+//         const extension = file.mimetype.split('/')[1];
+//         callback(null, `user-${req.user._id}-${Date.now()}.${extension}`)
+//     }
+// });
+const storage = multer.memoryStorage(); // -> Armazena a imagem na memória
+const fileFilter = (req, file, callback) => {
+    if (!file.mimetype.startsWith('image')) {
+        callback(new ErrorResponse(400, "Bad Request", "Invalid file type"), false);
+    }
+    else {
+        callback(null, true);
+    }
+};
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter
+});
+
+exports.uploadUserPhoto = upload.single('photo');
+
+exports.resizeImage = catchAsync(async (req, res, next) => {
+    if (!req.file) return next();
+    req.file.filename = `user-${req.user._id}-${Date.now()}.jpeg`;
+    await sharp(req.file.buffer)
+        .resize(500, 500)
+        .toFormat('jpeg')
+        .jpeg({ quality: 90 })
+        .toFile(`uploads/img/users/${req.file.filename}`);
+    next();
+});
 
 exports.register = catchAsync(async (req, res, next) => {
     const newUser = await User.create({
@@ -123,7 +163,12 @@ exports.updateSelfInfos = catchAsync(async (req, res, next) => {
         return next(new ErrorResponse(404, "Not Found", "User not found"));
     }
     const data = { name: req.body.name, email: req.body.email };
+    if (req.file) {
+        data.photo = req.file.filename;
+    }
     const updatedUser = await User.findByIdAndUpdate(req.user._id, data, { new: true, runValidators: true });
+    const photoUrl = `${req.protocol}://${req.get('host')}/uploads/img/users/${updatedUser.photo}`;
+    updatedUser.photo = photoUrl;
     return res.status(200).json({ status: "Success", data: updatedUser });
 });
 

@@ -11,7 +11,7 @@ tourRouter
     .get('/', authController.authGuard, tourController.findAllTours)
     .post('/', authController.authGuard, authController.preAuthorize('admin'), tourController.createTour)
     .get('/:id', tourController.findTourById)
-    .put('/:id', authController.authGuard, authController.preAuthorize('admin'), tourController.updateTour)
+    .put('/:id', authController.authGuard, authController.preAuthorize('admin'), tourController.uploadTourImages, tourController.resizeTourImages, tourController.updateTour)
     .delete('/:id', authController.authGuard, authController.preAuthorize('admin'), tourController.deleteTour)
     .get('/top-5-cheap', tourController.aliasTopTours, tourController.findAllTours)
     .get('/stats', authController.authGuard, authController.preAuthorize('admin'), tourController.getTourStats)

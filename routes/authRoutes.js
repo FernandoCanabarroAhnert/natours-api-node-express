@@ -9,7 +9,7 @@ authRouter
     .post("/forgot-password", authController.forgotPassword)
     .post("/reset-password", authController.resetPassword)
     .put("/update-password", authController.authGuard, authController.updatePassword)
-    .put("/update-infos", authController.authGuard, authController.updateSelfInfos)
+    .put("/update-infos", authController.authGuard, authController.uploadUserPhoto, authController.resizeImage, authController.updateSelfInfos)
     .delete("/delete-me", authController.authGuard, authController.deleteSelf)
     .get("/me", authController.authGuard, authController.getMe)
 

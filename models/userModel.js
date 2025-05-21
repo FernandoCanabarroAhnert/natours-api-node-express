@@ -52,7 +52,10 @@ const userSchema = new mongoose.Schema({
         default: true,
         select: false
     },
-    photo: String
+    photo: {
+        type: String,
+        default: "default.jpg"
+    }
 });
 
 userSchema.pre("save", async function(next) {

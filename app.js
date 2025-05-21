@@ -16,6 +16,7 @@ const xss = require('xss-clean');
 // npm i hpp
 const hpp = require('hpp');
 const reviewRouter = require('./routes/reviewRoutes');
+const path = require('path');
 
 const app = express();
 
@@ -49,6 +50,8 @@ app.use(hpp({
         'priceDiscount'
     ]
 }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
